@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "machq"
+version = "0.1.0"
+description = ""
+authors = ["brendan-reid91 <brendan.reid1991@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+pandas = "^1.5.1"
+pylint = "^2.15.5"
+black = "^22.10.0"
+matplotlib = "^3.6.2"
+mypy = "^0.982"
+stim = "^1.10.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests/"]
