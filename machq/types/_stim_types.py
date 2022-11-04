@@ -12,7 +12,7 @@ class Qubit(NamedTuple):
     y: int
 
     def __add__(self, other):
-        if isinstance(other, tuple):
+        if isinstance(other, tuple) or isinstance(other, list):
             other = Qubit(*other)
         if isinstance(other, Qubit):
             return Qubit(self.x + other.x, self.y + other.y)
