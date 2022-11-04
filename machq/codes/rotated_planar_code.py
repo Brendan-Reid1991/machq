@@ -1,4 +1,6 @@
-from machq.types import Circuit
+from typing import List, Tuple
+
+from machq.types import Circuit, Qubit
 
 
 class RotatedPlanarCode:
@@ -62,7 +64,9 @@ class RotatedPlanarCode:
         self.circuit = circuit
 
         self.data_qubits = [
-            (_x, _y) for _y in range(1, self.y_dim, 2) for _x in range(1, self.x_dim, 2)
+            Qubit(_x, _y)
+            for _y in range(1, self.y_dim, 2)
+            for _x in range(1, self.x_dim, 2)
         ]
 
         self.x_auxiliary_qubits = []
@@ -74,7 +78,7 @@ class RotatedPlanarCode:
             ylow = 0 + 2 * (offset % 2)
             yhigh = self.y_dim + (1 - self.x_distance % 2)
             for y in range(ylow, yhigh, 4):
-                self.x_auxiliary_qubits.append((x, y))
+                self.x_auxiliary_qubits.append(Qubit(x, y))
             offset += 1
 
         # Z stabilisers
@@ -83,7 +87,7 @@ class RotatedPlanarCode:
             xlow = 0 + 2 * (offset % 2)
             xhigh = self.x_dim
             for x in range(xlow, xhigh, 4):
-                self.z_auxiliary_qubits.append((x, y))
+                self.z_auxiliary_qubits.append(Qubit(x, y))
             offset += 1
 
         self.auxiliary_qubits = self.x_auxiliary_qubits + self.z_auxiliary_qubits
@@ -95,5 +99,42 @@ class RotatedPlanarCode:
 
         self.circuit.add_qubits(qubit_coords=self.qubit_coords)
 
+        self.plaquette_corners = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
     def __str__(self) -> str:
         return f"{self.name}_{self.x_distance}x{self.z_distance}"
+
+    def _neighbouring_data_qubits(self, auxiliary_qubit: Qubit):
+        """Check which data qubits are neighbouring the input auxiliary qubit.
+
+        Parameters
+        ----------
+        auxiliary_qubit : Qubit
+            An auxiliary qubit coordinate.
+        """
+        if not auxiliary_qubit in self.auxiliary_qubits:
+            raise ValueError("Qubit is not an auxiliary qubit.")
+
+        return [
+            auxiliary_qubit + delta
+            for delta in self.plaquette_corners
+            if auxiliary_qubit + delta in self.data_qubits
+        ]
+
+    def syndrome_extraction(
+        self,
+        x_schedule: List[Tuple[int, int]] = None,
+        z_schedule: List[Tuple[int, int]] = None,
+    ):
+        """A function describing syndrome extraction in the rotated planar code."""
+        x_schedule = (
+            x_schedule
+            if x_schedule is not None
+            else [(-1, 1), (1, 1), (-1, -1), (1, -1)]
+        )
+
+        z_schedule = (
+            z_schedule
+            if z_schedule is not None
+            else [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        )
