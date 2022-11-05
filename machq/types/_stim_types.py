@@ -239,3 +239,15 @@ class Circuit:
                 targets=[stim.target_rec(x) for x in lookbacks],
                 arg=arg,
             )
+
+    def add_logical(self, indices: List[int]):
+        """Add a logical observable to the circuit.
+
+        Parameters
+        ----------
+        indices : List[int]
+            Measurement record indices to include in the logical
+        """
+        self.circuit.append(
+            "OBSERVABLE_INCLUDE", targets=[stim.target_rec(x) for x in indices], arg=(0)
+        )
