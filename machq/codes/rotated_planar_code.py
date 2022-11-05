@@ -329,6 +329,14 @@ class RotatedPlanarCode:
 
         self.measure_data_qubits_for_z_memory()
 
+        lookback = len(self.data_qubits)
+        logical_indices = [
+            -lookback + idx
+            for idx, qub in enumerate(self.data_qubits)
+            if qub.y == self.y_dim - 2
+        ]
+        self.circuit.add_logical(indices=logical_indices)
+
     def logical_x_memory(self, rounds: int = None):
         """Encode a logical plus state and maintain it for
         rounds of error correction.
@@ -346,11 +354,17 @@ class RotatedPlanarCode:
 
         self.measure_data_qubits_for_x_memory()
 
+        lookback = len(self.data_qubits)
+        logical_indices = [
+            -lookback + idx
+            for idx, qub in enumerate(self.data_qubits)
+            if qub.x == self.x_dim - 2
+        ]
+        self.circuit.add_logical(indices=logical_indices)
+
 
 if __name__ == "__main__":
-    code = RotatedPlanarCode(
-        x_distance=5, z_distance=5, noise_profile=DepolarizingNoise(p=0.01)
-    )
+    code = RotatedPlanarCode(noise_profile=DepolarizingNoise(p=0.01))
     code.logical_x_memory()
     print(code.circuit)
     code.circuit.as_stim.detector_error_model(decompose_errors=True)
