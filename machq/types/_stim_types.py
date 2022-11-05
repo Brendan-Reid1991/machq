@@ -2,6 +2,25 @@ from __future__ import annotations
 from typing import List, Tuple, Optional, NamedTuple
 import stim
 
+from machq.noise import NoiseProfile, NoiseChannels, DepolarizingNoise
+
+ONE_QUBIT_GATES = [
+    "H",
+    "S",
+    "S_DAG",
+    "X",
+    "SQRT_X",
+    "SQRT_X_DAG",
+    "Y",
+    "SQRT_Y",
+    "SQRT_Y_DAG",
+    "Z",
+]
+
+TWO_QUBIT_GATES = [
+    "CX",
+]
+
 
 class Qubit(NamedTuple):
     """A class that allows easy reference to
@@ -33,8 +52,16 @@ class Circuit:
     use of a stim.Circuit() class.
     """
 
-    def __init__(self):
+    def __init__(self, noise_profile: NoiseProfile = DepolarizingNoise(p=0)):
         self.circuit = stim.Circuit()
+
+        self.noise_profile = noise_profile
+        self.single_qubit_gate_noise = self.noise_profile.single_qubit_gate_noise
+        self.two_qubit_gate_noise = self.noise_profile.two_qubit_gate_noise
+        self.measurement_flip_prob = self.noise_profile.measurement_flip_prob
+        self.reset_noise = self.noise_profile.reset_noise
+        self.idle_noise = self.noise_profile.idle_noise
+
         self.idling_qubits = {}
 
     def __repr__(self):
@@ -96,35 +123,46 @@ class Circuit:
         ):
             raise ValueError(f"Not all qubit(s) {qubits} are present in the circuit.")
 
-    def CX(self, ctrl: int, targ: int):
+    def CX(self, qubits: List[int]):
         """A convenience function that streamlines the use of
         a CNOT gate in stim.
 
         Parameters
         ----------
-        ctrl : int
-            The index of the control qubit.
-        targ : int
-            The index of the target qubit.
+        qubits : List[int]
+            List of qubits to apply CX gates to.
+            Even indexed qubits are controls,
+            odd indexed qubits are targets.
         """
-        self._check_qubits_exist(qubits=[ctrl, targ])
+        if len(qubits) % 2 != 0:
+            raise ValueError("Odd number of qubits passed to a CX gate.")
 
-        self.circuit.append("CX", [ctrl, targ])
-        self.idling_qubits[ctrl] = 1
-        self.idling_qubits[targ] = 1
+        self._check_qubits_exist(qubits=qubits)
 
-    def H(self, qubit: int):
+        self.circuit.append("CX", qubits)
+        stim_string, noise_param = self.two_qubit_gate_noise
+        self.circuit.append(name=stim_string, targets=qubits, arg=noise_param)
+
+        for qubit in qubits:
+            self.idling_qubits[qubit] = 1
+
+    def H(self, qubits: int | List[int]):
         """A convenience function that streamlines the use of
         a Hadamard gate in stim.
 
         Parameters
         ----------
-        qubit : int | Tuple
-            Qubit to apply the CNOT to.
+        qubits : int | List[int]
+            Qubit(s) to apply the CNOT to.
         """
-        self._check_qubits_exist(qubits=qubit)
-        self.circuit.append("H", [qubit])
-        self.idling_qubits[qubit] = 1
+        qubits = qubits if isinstance(qubits, List) else [qubits]
+        self._check_qubits_exist(qubits=qubits)
+        self.circuit.append("H", qubits)
+        stim_string, noise_param = self.single_qubit_gate_noise
+        self.circuit.append(name=stim_string, targets=qubits, arg=noise_param)
+
+        for qubit in qubits:
+            self.idling_qubits[qubit] = 1
 
     def time_step(self, idle_noise: Tuple[str, float]):
         """Add a time step here to indicate a gate layer
@@ -141,49 +179,56 @@ class Circuit:
             arg=noise_param,
         )
         self.circuit.append("TICK")
+        for key in self.idling_qubits.keys():
+            self.idling_qubits[key] = 0
 
-    def reset_qubits(self, reset_noise: Tuple[str, float], qubits: List[int] = None):
+    def reset_qubits(
+        self,
+        qubits: List[int] = None,
+        reset_channel: Callable = NoiseChannels.XError,
+    ):
         """Reset qubits into the Z basis.
 
         Parameters
         ----------
-        reset_noise : Tuple[str, float]
-            Which noise channel and strength to use.
         qubits : List[int], optional
-            Qubits to reset, by default None. If None, all qubits are reset.
+            Qubits to reset, by default None
+        reset_channel : Callable, optional
+            Which noise channel to run the reset gate through, by default XError
         """
-        stim_string, noise_param = reset_noise
+        stim_string, noise_param = reset_channel(self.reset_noise)
         qubits = range(self.circuit.num_qubits) if qubits is None else qubits
+        self.circuit.append(name="R", targets=qubits)
         self.circuit.append(name=stim_string, targets=qubits, arg=noise_param)
 
-    def measure_qubits(self, measurement_flip: float, qubits: List[int]):
+    def measure_qubits(self, qubits: List[int]):
         """Measure qubits in the Z basis.
 
         Parameters
         ----------
-        measurement_flip : float
-            Probability of a measurement being recorded incorrectly.
         qubits : List[int]
             List of qubits to measure.
         """
-        self.circuit.append("M", targets=qubits, arg=measurement_flip)
+        self.circuit.append("M", targets=qubits, arg=self.measurement_flip_prob)
 
-    def detectors(
-        self,
-        lookback_indices: List[int] | List[List[int]],
-        arguments: List[Tuple],
-    ):
+    def detectors(self, lookbacks_and_args: List[Tuple[List, Tuple]]):
         """Add detectors to the circuit, taking the relevant
         lookback indices and the arguments associated with each.
 
         Parameters
         ----------
-        lookback_indices : List[int] | List[Tuple[int, int]]
-            Indices in the measurement history to assign detectors to.
-        arguments : List[Tuple]
-            Labels to assign to each detector. Must have the same length as
-            the lookback indices.
+        lookbacks_and_args : List[Tuple[List, Tuple]]
+            Unpacking this give you the list of lookback arguments
+            and the list of relevant arguments.
+
+        Raises
+        ------
+        ValueError
+            If the length of the lookback indices and arguments do not match up.
         """
+        lookback_indices = [x[0] for x in lookbacks_and_args]
+        arguments = [x[1] for x in lookbacks_and_args]
+
         if len(arguments) != len(lookback_indices):
             raise ValueError("Mismatch between lookback indices and arguments given.")
 
