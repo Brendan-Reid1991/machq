@@ -1,7 +1,8 @@
 from typing import List, Tuple
+import itertools
 
 from machq.types import Circuit, Qubit
-from machq.noise import NoiseProfile, DepolarizingNoise
+from machq.noise import NoiseProfile, DepolarizingNoise, NoiseChannels
 
 
 class RotatedPlanarCode:
@@ -64,8 +65,8 @@ class RotatedPlanarCode:
         self.x_dim = 2 * z_distance + 1
         self.y_dim = 2 * x_distance + 1
 
-        self.circuit = Circuit()
         self.noise_profile = noise_profile
+        self.circuit = Circuit(noise_profile=self.noise_profile)
 
         self.data_qubits = [
             Qubit(_x, _y)
@@ -132,7 +133,7 @@ class RotatedPlanarCode:
         """Add a time step to the circuit."""
         self.circuit.time_step(idle_noise=self.noise_profile.idle_noise)
 
-    def syndrome_extraction(
+    def _measure_syndromes_(
         self,
         x_schedule: List[Tuple[int, int]] = None,
         z_schedule: List[Tuple[int, int]] = None,
@@ -148,38 +149,49 @@ class RotatedPlanarCode:
         z_schedule = (
             z_schedule
             if z_schedule is not None
-            else [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+            else [(-1, 1), (-1, -1), (1, 1), (1, -1)]
         )
 
-        for x_aux in self.x_auxiliary_qubits:
-            self.circuit.H(self.qubit_map[x_aux])
+        self.circuit.H([self.qubit_map[x_aux] for x_aux in self.x_auxiliary_qubits])
 
         self.time_step()
 
         for idx, (x_delta, z_delta) in enumerate(zip(x_schedule, z_schedule)):
-            controls = []
-            targets = []
+            cnot_qubits = []
             for qubit in self.auxiliary_qubits:
                 if (
                     qubit in self.x_auxiliary_qubits
                     and qubit + x_delta in self.data_qubits
                 ):
-                    controls.append(qubit)
-                    targets.append(qubit + x_delta)
+                    cnot_qubits.append(qubit)
+                    cnot_qubits.append(qubit + x_delta)
                 if (
                     qubit in self.z_auxiliary_qubits
                     and qubit + z_delta in self.data_qubits
                 ):
-                    controls.append(qubit + z_delta)
-                    targets.append(qubit)
-            for ctrl, targ in zip(controls, targets):
-                self.circuit.CX(self.qubit_map[ctrl], self.qubit_map[targ])
+                    cnot_qubits.append(qubit + z_delta)
+                    cnot_qubits.append(qubit)
+
+            cnot_qubit_indices = [self.qubit_map[x] for x in cnot_qubits]
+            self.circuit.CX(cnot_qubit_indices)
             self.time_step()
 
-        for x_aux in self.x_auxiliary_qubits:
-            self.circuit.H(self.qubit_map[x_aux])
+        self.circuit.H([self.qubit_map[x_aux] for x_aux in self.x_auxiliary_qubits])
 
         self.time_step()
+
+        self.circuit.measure_qubits(
+            qubits=[self.qubit_map[aux] for aux in self.x_auxiliary_qubits],
+        )
+        self.circuit.measure_qubits(
+            qubits=[self.qubit_map[aux] for aux in self.z_auxiliary_qubits],
+        )
+
+        self.time_step()
+
+        self.circuit.reset_qubits(
+            qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits]
+        )
 
     def encode_logical_zero(self):
         """Encode the logical zero state.
@@ -191,23 +203,17 @@ class RotatedPlanarCode:
         noise_channel: Callable = self.noise_profile.noise_channels.XError
         noise_param = self.noise_profile.reset_noise
 
-        self.circuit.reset_qubits(reset_noise=noise_channel(noise_param))
+        self.circuit.reset_qubits()
 
-        self.syndrome_extraction()
-
-        self.circuit.measure_qubits(
-            measurement_flip=self.noise_profile.measurement_flip_prob,
-            qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits],
-        )
+        self._measure_syndromes_()
 
         max_lookback = len(self.z_auxiliary_qubits)
-        lookback_indices = []
-        arguments = []
-        for idx, z_aux in enumerate(self.z_auxiliary_qubits):
-            lookback_indices.append(-max_lookback + idx)
-            arguments.append((z_aux.x, z_aux.y, 0))
+        lookback_and_arguments = [
+            ([-max_lookback + idx], (z_aux.x, z_aux.y, 0))
+            for idx, z_aux in enumerate(self.z_auxiliary_qubits)
+        ]
 
-        self.circuit.detectors(lookback_indices=lookback_indices, arguments=arguments)
+        self.circuit.detectors(lookbacks_and_args=lookback_and_arguments)
 
     def encode_logical_plus(self):
         """Encode the logical plus state.
@@ -220,28 +226,131 @@ class RotatedPlanarCode:
         noise_channel: Callable = self.noise_profile.noise_channels.XError
         noise_param = self.noise_profile.reset_noise
 
-        self.circuit.reset_qubits(reset_noise=noise_channel(noise_param))
-        for qubit in self.data_qubits:
-            self.circuit.H(self.qubit_map[qubit])
+        self.circuit.reset_qubits()
+        self.circuit.H([self.qubit_map[x] for x in self.data_qubits])
 
-        self.syndrome_extraction()
+        self._measure_syndromes_()
 
+        max_lookback = len(self.auxiliary_qubits)
+        lookback_and_arguments = [
+            ([-max_lookback + idx], (x_aux.x, x_aux.y, 0))
+            for idx, x_aux in enumerate(self.x_auxiliary_qubits)
+        ]
+
+        self.circuit.detectors(lookbacks_and_args=lookback_and_arguments)
+
+    def syndrome_extraction(self, rounds: int = None):
+        """Perform multiple rounds of error correction.
+
+        Parameters
+        ----------
+        rounds : int, optional
+            How many rounds of syndrome extraction to perform, by default None.
+            If None, the minimum between (x_distance, z_distance) is taken.
+        """
+        rounds = min(self.x_distance, self.z_distance) if rounds is None else rounds
+
+        max_lookback = len(self.auxiliary_qubits)
+        for _r in range(rounds):
+            self._measure_syndromes_()
+
+            if _r < rounds - 1:
+                lookbacks_and_arguments = [
+                    (
+                        [-max_lookback + idx, -2 * max_lookback + idx],
+                        (aux.x, aux.y, _r + 1),
+                    )
+                    for idx, aux in enumerate(self.auxiliary_qubits)
+                ]
+                self.circuit.detectors(lookbacks_and_args=lookbacks_and_arguments)
+
+    def measure_data_qubits_for_z_memory(self):
+        """Measure out the data qubits and apply the relevant
+        detectors for a logical Z memory experiment.
+        """
         self.circuit.measure_qubits(
-            measurement_flip=self.noise_profile.measurement_flip_prob,
-            qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits],
+            qubits=[self.qubit_map[qub] for qub in self.data_qubits]
         )
 
-        max_lookback = len(self.z_auxiliary_qubits)
-        lookback_indices = []
-        arguments = []
-        for idx, z_aux in enumerate(self.z_auxiliary_qubits):
-            lookback_indices.append(-max_lookback + idx)
-            arguments.append((z_aux.x, z_aux.y, 0))
+        max_lookback = len(self.data_qubits) + len(self.z_auxiliary_qubits)
+        data_lookback = len(self.data_qubits)
+        lookback_and_args = []
 
-        self.circuit.detectors(lookback_indices=lookback_indices, arguments=arguments)
+        for idx, z_aux in enumerate(self.z_auxiliary_qubits):
+            _lookback_ = [
+                -data_lookback + dq_idx
+                for dq_idx, dq in enumerate(self.data_qubits)
+                if dq in self._neighbouring_data_qubits(auxiliary_qubit=z_aux)
+            ] + [-max_lookback + idx]
+
+            lookback_and_args.append((_lookback_, (z_aux.x, z_aux.y, self.z_distance)))
+
+        self.circuit.detectors(lookbacks_and_args=lookback_and_args)
+
+    def measure_data_qubits_for_x_memory(self):
+        """Measure out the data qubits and apply the relevant
+        detectors for a logical X memory experiment.
+        """
+        self.circuit.H(qubits=[self.qubit_map[qub] for qub in self.data_qubits])
+        self.time_step()
+        self.circuit.measure_qubits(
+            qubits=[self.qubit_map[qub] for qub in self.data_qubits]
+        )
+
+        max_lookback = len(self.data_qubits) + len(self.auxiliary_qubits)
+        data_lookback = len(self.data_qubits)
+        lookback_and_args = []
+
+        for idx, x_aux in enumerate(self.x_auxiliary_qubits):
+            _lookback_ = [
+                -data_lookback + dq_idx
+                for dq_idx, dq in enumerate(self.data_qubits)
+                if dq in self._neighbouring_data_qubits(auxiliary_qubit=x_aux)
+            ] + [-max_lookback + idx]
+
+            lookback_and_args.append((_lookback_, (x_aux.x, x_aux.y, self.x_distance)))
+
+        self.circuit.detectors(lookbacks_and_args=lookback_and_args)
+
+    def logical_z_memory(self, rounds: int = None):
+        """Encode a logical zero state and maintain it for
+        rounds of error correction.
+
+        Parameters
+        ----------
+        rounds : int, optional
+            How many rounds to maintian the logical zero state for, by default None.
+            If None, the value of z_distance is taken.
+        """
+        rounds = self.z_distance if rounds is None else rounds
+        self.encode_logical_zero()
+
+        self.syndrome_extraction(rounds=rounds)
+
+        self.measure_data_qubits_for_z_memory()
+
+    def logical_x_memory(self, rounds: int = None):
+        """Encode a logical plus state and maintain it for
+        rounds of error correction.
+
+        Parameters
+        ----------
+        rounds : int, optional
+            How many rounds to maintian the logical plus state for, by default None.
+            If None, the value of x_distance is taken.
+        """
+        rounds = self.x_distance if rounds is None else rounds
+        self.encode_logical_plus()
+
+        self.syndrome_extraction(rounds=rounds)
+
+        self.measure_data_qubits_for_x_memory()
 
 
 if __name__ == "__main__":
-    code = RotatedPlanarCode()
-    code.encode_logical_zero()
+    code = RotatedPlanarCode(
+        x_distance=5, z_distance=5, noise_profile=DepolarizingNoise(p=0.01)
+    )
+    code.logical_x_memory()
     print(code.circuit)
+    code.circuit.as_stim.detector_error_model(decompose_errors=True)
