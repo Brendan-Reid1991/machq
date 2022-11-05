@@ -1,6 +1,6 @@
-#### This code taken from the stim 'Getting Started' notebook
-#### https://github.com/quantumlib/Stim/blob/main/doc/getting_started.ipynb
-
+##########################################################################
+# This file is copied straight from the Stim "Getting Started" notebook. #
+##########################################################################
 import math
 from typing import Callable, List
 
