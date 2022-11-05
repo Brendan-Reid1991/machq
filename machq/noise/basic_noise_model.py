@@ -62,5 +62,5 @@ class CircuitLevelNoise(DepolarizingNoise):
         super().__init__(p=p)
         self.single_qubit_gate_noise = NoiseChannels.Depolarize1(p=p / 10)
         self.measurement_flip_prob = p / 10
-        self.reset_noise = NoiseChannels.Depolarize1(p=p / 10)
+        self.reset_noise = p / 10
         self.idle_noise = NoiseChannels.Depolarize1(p=p / 10)
