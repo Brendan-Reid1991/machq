@@ -1,7 +1,30 @@
+from abc import ABC
+
 from machq.noise import NoiseChannels
 
 
-class DepolarizingNoise:
+class NoiseProfile(ABC):
+    """An abstract base class for noise profiles."""
+
+    def _check_valid_noise(self, p: float):
+        """Private function to check if the noise
+        parameter passed to each noise channel is valid.
+
+        Parameters
+        ----------
+        p : float
+            The noise parameter
+
+        Raises
+        -------
+        ValueError
+            If p < 0 or p > 1
+        """
+        if not 0 <= p <= 1:
+            raise ValueError(f"Invalid noise parameter {p} passed. ")
+
+
+class DepolarizingNoise(NoiseProfile):
     """A class to summarise a complete noise profile;
     covering single- and two-qubit gate noise,
     measurement flip probability, reset noise and idle noise.
@@ -20,28 +43,12 @@ class DepolarizingNoise:
 
         self._check_valid_noise(p=p)
 
+        self.noise_channels = NoiseChannels
         self.single_qubit_gate_noise = NoiseChannels.Depolarize1(p=p)
         self.two_qubit_gate_noise = NoiseChannels.Depolarize2(p=p)
         self.measurement_flip_prob = p
-        self.reset_noise = NoiseChannels.Depolarize1(p=p)
+        self.reset_noise = p
         self.idle_noise = NoiseChannels.Depolarize1(p=p)
-
-    def _check_valid_noise(self, p: float):
-        """Private function to check if the noise
-        parameter passed to each noise channel is valid.
-
-        Parameters
-        ----------
-        p : float
-            The noise parameter
-
-        Raises
-        -------
-        ValueError
-            If p < 0 or p > 1
-        """
-        if not 0 <= p <= 1:
-            raise ValueError(f"Invalid noise parameter {p} passed. ")
 
 
 class CircuitLevelNoise(DepolarizingNoise):
