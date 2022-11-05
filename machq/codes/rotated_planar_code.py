@@ -365,6 +365,6 @@ class RotatedPlanarCode:
 
 if __name__ == "__main__":
     code = RotatedPlanarCode(noise_profile=DepolarizingNoise(p=0.01))
-    code.logical_x_memory()
+    code.logical_z_memory()
     print(code.circuit)
     code.circuit.as_stim.detector_error_model(decompose_errors=True)
