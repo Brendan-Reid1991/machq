@@ -29,7 +29,7 @@ class TestDepolarizingNoise:
         assert depolarize_noise.measurement_flip_prob == prob
 
     def test_reset_noise(self, depolarize_noise):
-        assert depolarize_noise.reset_noise == NoiseChannels.Depolarize1(p=prob)
+        assert depolarize_noise.reset_noise == prob
 
     def test_idle_noise(self, depolarize_noise):
         assert depolarize_noise.idle_noise == NoiseChannels.Depolarize1(p=prob)

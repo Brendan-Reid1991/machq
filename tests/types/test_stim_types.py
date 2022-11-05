@@ -55,15 +55,22 @@ class TestCircuit:
         )
 
     def test_CX(self, circuit_2q):
-        circuit_2q.CX(0, 1)
-        assert circuit_2q.as_stim[-1].name == "CX" and [
+        circuit_2q.CX([0, 1])
+        assert circuit_2q.as_stim[-1].name == "DEPOLARIZE2" and [
             x.value for x in circuit_2q.as_stim[-1].targets_copy()
+        ] == [0, 1]
+
+        assert circuit_2q.as_stim[-2].name == "CX" and [
+            x.value for x in circuit_2q.as_stim[-2].targets_copy()
         ] == [0, 1]
 
     def test_H(self, circuit_1q):
         circuit_1q.H(0)
-        assert circuit_1q.as_stim[-1].name == "H" and [
+        assert circuit_1q.as_stim[-1].name == "DEPOLARIZE1" and [
             x.value for x in circuit_1q.as_stim[-1].targets_copy()
+        ] == [0]
+        assert circuit_1q.as_stim[-2].name == "H" and [
+            x.value for x in circuit_1q.as_stim[-2].targets_copy()
         ] == [0]
 
     def test_check_qubits_exist_raises_error(self, circuit_1q):
