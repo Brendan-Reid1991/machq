@@ -34,7 +34,7 @@ class DepolarizingNoise(NoiseProfile):
     in the papers arxiv.org/abs/2205.09828 and arxiv.org/abs/1311.5003.
 
     By inheriting from this noise profile, any individual noise value
-    can be overwritten.s
+    can be overwritten.
     """
 
     name = "depolarizing_noise"

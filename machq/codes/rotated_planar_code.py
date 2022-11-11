@@ -204,6 +204,7 @@ class RotatedPlanarCode:
         noise_param = self.noise_profile.reset_noise
 
         self.circuit.reset_qubits()
+        self.time_step()
 
         self._measure_syndromes_()
 
@@ -251,18 +252,18 @@ class RotatedPlanarCode:
         rounds = min(self.x_distance, self.z_distance) if rounds is None else rounds
 
         max_lookback = len(self.auxiliary_qubits)
-        for _r in range(rounds):
+        for _r in range(1, rounds):
             self._measure_syndromes_()
 
-            if _r < rounds - 1:
-                lookbacks_and_arguments = [
-                    (
-                        [-max_lookback + idx, -2 * max_lookback + idx],
-                        (aux.x, aux.y, _r + 1),
-                    )
-                    for idx, aux in enumerate(self.auxiliary_qubits)
-                ]
-                self.circuit.detectors(lookbacks_and_args=lookbacks_and_arguments)
+            # if _r < rounds - 1:
+            lookbacks_and_arguments = [
+                (
+                    [-max_lookback + idx, -2 * max_lookback + idx],
+                    (aux.x, aux.y, _r),
+                )
+                for idx, aux in enumerate(self.auxiliary_qubits)
+            ]
+            self.circuit.detectors(lookbacks_and_args=lookbacks_and_arguments)
 
     def measure_data_qubits_for_z_memory(self):
         """Measure out the data qubits and apply the relevant
@@ -365,6 +366,6 @@ class RotatedPlanarCode:
 
 if __name__ == "__main__":
     code = RotatedPlanarCode(noise_profile=DepolarizingNoise(p=0.01))
-    code.logical_z_memory()
-    print(code.circuit)
+    code.logical_x_memory()
     code.circuit.as_stim.detector_error_model(decompose_errors=True)
+    circuit = code.circuit.as_stim
