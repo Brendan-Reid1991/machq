@@ -166,18 +166,17 @@ class Circuit:
 
     def time_step(self, idle_noise: Tuple[str, float]):
         """Add a time step here to indicate a gate layer
-        terminating. TODO Idle noise will be added to qubits
-        that did not participate in any gates since the previous
-        time step.
+        terminating.
         """
         stim_string, noise_param = idle_noise
-        self.circuit.append(
-            name=stim_string,
-            targets=[
-                qubit for qubit, idling in self.idling_qubits.items() if idling == 0
-            ],
-            arg=noise_param,
-        )
+        if any(idling == 0 for _, idling in self.idling_qubits.items()):
+            self.circuit.append(
+                name=stim_string,
+                targets=[
+                    qubit for qubit, idling in self.idling_qubits.items() if idling == 0
+                ],
+                arg=noise_param,
+            )
         self.circuit.append("TICK")
         for key in self.idling_qubits.keys():
             self.idling_qubits[key] = 0
@@ -200,6 +199,8 @@ class Circuit:
         qubits = range(self.circuit.num_qubits) if qubits is None else qubits
         self.circuit.append(name="R", targets=qubits)
         self.circuit.append(name=stim_string, targets=qubits, arg=noise_param)
+        for qub in qubits:
+            self.idling_qubits[qub] = 1
 
     def measure_qubits(self, qubits: List[int]):
         """Measure qubits in the Z basis.
@@ -210,6 +211,8 @@ class Circuit:
             List of qubits to measure.
         """
         self.circuit.append("M", targets=qubits, arg=self.measurement_flip_prob)
+        for qub in qubits:
+            self.idling_qubits[qub] = 1
 
     def detectors(self, lookbacks_and_args: List[Tuple[List, Tuple]]):
         """Add detectors to the circuit, taking the relevant
