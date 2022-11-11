@@ -1,1 +1,2 @@
+from machq.codes._qec_code import QuantumErrorCorrectionCode
 from machq.codes.rotated_planar_code import RotatedPlanarCode

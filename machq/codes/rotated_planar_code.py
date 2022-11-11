@@ -2,10 +2,11 @@ from typing import List, Tuple
 import itertools
 
 from machq.types import Circuit, Qubit
+from machq.codes import QuantumErrorCorrectionCode
 from machq.noise import NoiseProfile, DepolarizingNoise, NoiseChannels
 
 
-class RotatedPlanarCode:
+class RotatedPlanarCode(QuantumErrorCorrectionCode):
     r"""A class to implement a rotated planar code in stim.
 
     A code defined with (x_distance, z_distance) will have a coordinate grid spanning a
@@ -60,40 +61,15 @@ class RotatedPlanarCode:
         z_distance: int = 3,
         noise_profile: NoiseProfile = DepolarizingNoise(p=0),
     ):
-        self.x_distance = x_distance
-        self.z_distance = z_distance
+        super().__init__(
+            x_distance=x_distance, z_distance=z_distance, noise_profile=noise_profile
+        )
         self.x_dim = 2 * z_distance + 1
         self.y_dim = 2 * x_distance + 1
 
-        self.noise_profile = noise_profile
-        self.circuit = Circuit(noise_profile=self.noise_profile)
+        self.data_qubits = self.define_data()
 
-        self.data_qubits = [
-            Qubit(_x, _y)
-            for _y in range(1, self.y_dim, 2)
-            for _x in range(1, self.x_dim, 2)
-        ]
-
-        self.x_auxiliary_qubits = []
-        self.z_auxiliary_qubits = []
-
-        # X-Auxiliary Qubit Coordinates
-        offset = 0
-        for x in range(2, (self.x_dim - 1), 2):
-            ylow = 0 + 2 * (offset % 2)
-            yhigh = self.y_dim + (1 - self.x_distance % 2)
-            for y in range(ylow, yhigh, 4):
-                self.x_auxiliary_qubits.append(Qubit(x, y))
-            offset += 1
-
-        # Z-Auxiliary Qubit Coordinates
-        offset = 1
-        for y in range(2, self.y_dim - 1, 2):
-            xlow = 0 + 2 * (offset % 2)
-            xhigh = self.x_dim
-            for x in range(xlow, xhigh, 4):
-                self.z_auxiliary_qubits.append(Qubit(x, y))
-            offset += 1
+        self.x_auxiliary_qubits, self.z_auxiliary_qubits = self.define_auxiliary()
 
         self.auxiliary_qubits = self.x_auxiliary_qubits + self.z_auxiliary_qubits
 
@@ -111,6 +87,35 @@ class RotatedPlanarCode:
 
     def __str__(self) -> str:
         return f"{self.name}_{self.x_distance}x{self.z_distance}"
+
+    def define_data(self):
+        return [
+            Qubit(_x, _y)
+            for _y in range(1, self.y_dim, 2)
+            for _x in range(1, self.x_dim, 2)
+        ]
+
+    def define_auxiliary(self):
+        x_auxiliary_qubits = []
+        z_auxiliary_qubits = []
+
+        # X-Auxiliary Qubit Coordinates
+        offset = 0
+        for x in range(2, (self.x_dim - 1), 2):
+            ylow = 0 + 2 * (offset % 2)
+            yhigh = self.y_dim + (1 - self.x_distance % 2)
+            for y in range(ylow, yhigh, 4):
+                x_auxiliary_qubits.append(Qubit(x, y))
+            offset += 1
+        # Z-Auxiliary Qubit Coordinates
+        offset = 1
+        for y in range(2, self.y_dim - 1, 2):
+            xlow = 0 + 2 * (offset % 2)
+            xhigh = self.x_dim
+            for x in range(xlow, xhigh, 4):
+                z_auxiliary_qubits.append(Qubit(x, y))
+            offset += 1
+        return x_auxiliary_qubits, z_auxiliary_qubits
 
     def _neighbouring_data_qubits(self, auxiliary_qubit: Qubit):
         """Check which data qubits are neighbouring the input auxiliary qubit.
@@ -362,10 +367,3 @@ class RotatedPlanarCode:
             if qub.x == self.x_dim - 2
         ]
         self.circuit.add_logical(indices=logical_indices)
-
-
-if __name__ == "__main__":
-    code = RotatedPlanarCode(noise_profile=DepolarizingNoise(p=0.01))
-    code.logical_x_memory()
-    code.circuit.as_stim.detector_error_model(decompose_errors=True)
-    circuit = code.circuit.as_stim
