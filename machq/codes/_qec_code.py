@@ -18,11 +18,18 @@ class QuantumErrorCorrectionCode(ABC):
         self.x_dim = None
         self.z_dim = None
 
+        self.qubit_coords = None
+
         self.noise_profile = noise_profile
         self.circuit = Circuit(noise_profile=self.noise_profile)
 
     def __str__(self) -> str:
         return f"{self.name}_{self.x_distance}x{self.z_distance}"
+
+    def clean_circuit(self):
+        """A function to remove all entries from the circuit, except the qubit identifiers"""
+        self.circuit.clear
+        self.circuit.add_qubits(qubit_coords=self.qubit_coords)
 
     @abstractmethod
     def define_data(self):
@@ -37,11 +44,11 @@ class QuantumErrorCorrectionCode(ABC):
         """A function describing how syndromes are measured in the code; varies between codes."""
 
     @abstractmethod
-    def logical_x_memory(self):
+    def logical_x_memory(self, rounds: int = None):
         """A function describing how to encode and maintain a logical plus state"""
 
     @abstractmethod
-    def logical_z_memory(self):
+    def logical_z_memory(self, rounds: int = None):
         """A function describing how to encode and maintain a logical zero state"""
 
     def time_step(self):
