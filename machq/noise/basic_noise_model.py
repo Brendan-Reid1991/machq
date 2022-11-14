@@ -37,7 +37,7 @@ class DepolarizingNoise(NoiseProfile):
     can be overwritten.
     """
 
-    name = "depolarizing_noise"
+    name = "depolarizing"
 
     def __init__(self, p: float):
 
@@ -56,7 +56,7 @@ class CircuitLevelNoise(DepolarizingNoise):
     two qubit gates are typically an order of magnitude noisier than all other noise sources.
     """
 
-    name = "circuit_level_noise"
+    name = "circuit_level"
 
     def __init__(self, p):
         super().__init__(p=p)

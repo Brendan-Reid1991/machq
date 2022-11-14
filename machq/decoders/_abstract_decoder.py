@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from machq.types import Circuit
+
 
 class Decoder(ABC):
     """An abstract class for decoders."""

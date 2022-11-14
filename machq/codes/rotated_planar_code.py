@@ -1,7 +1,7 @@
 from typing import List, Tuple
 import itertools
 
-from machq.types import Circuit, Qubit
+from machq.types import Circuit, Qubit, Distance
 from machq.codes import QuantumErrorCorrectionCode
 from machq.noise import NoiseProfile, DepolarizingNoise, NoiseChannels
 
@@ -57,8 +57,8 @@ class RotatedPlanarCode(QuantumErrorCorrectionCode):
 
     def __init__(
         self,
-        x_distance: int = 3,
-        z_distance: int = 3,
+        x_distance: Distance = 3,
+        z_distance: Distance = 3,
         noise_profile: NoiseProfile = DepolarizingNoise(p=0),
     ):
         super().__init__(
@@ -67,9 +67,9 @@ class RotatedPlanarCode(QuantumErrorCorrectionCode):
         self.x_dim = 2 * z_distance + 1
         self.y_dim = 2 * x_distance + 1
 
-        self.data_qubits = self.define_data()
+        self.data_qubits = self._define_data_()
 
-        self.x_auxiliary_qubits, self.z_auxiliary_qubits = self.define_auxiliary()
+        self.x_auxiliary_qubits, self.z_auxiliary_qubits = self._define_auxiliary_()
 
         self.auxiliary_qubits = self.x_auxiliary_qubits + self.z_auxiliary_qubits
 
@@ -88,14 +88,14 @@ class RotatedPlanarCode(QuantumErrorCorrectionCode):
     def __str__(self) -> str:
         return f"{self.name}_{self.x_distance}x{self.z_distance}"
 
-    def define_data(self):
+    def _define_data_(self):
         return [
             Qubit(_x, _y)
             for _y in range(1, self.y_dim, 2)
             for _x in range(1, self.x_dim, 2)
         ]
 
-    def define_auxiliary(self):
+    def _define_auxiliary_(self):
         x_auxiliary_qubits = []
         z_auxiliary_qubits = []
 
