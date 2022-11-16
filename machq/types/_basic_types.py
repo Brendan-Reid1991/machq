@@ -23,6 +23,13 @@ class Qubit(NamedTuple):
             return Qubit(self.x + other.x, self.y + other.y)
         raise NotImplementedError()
 
+    def __sub__(self, other):
+        if isinstance(other, tuple) or isinstance(other, list):
+            other = Qubit(*other)
+        if isinstance(other, Qubit):
+            return Qubit(self.x - other.x, self.y - other.y)
+        raise NotImplementedError()
+
     def __mul__(self, other):
         if isinstance(other, int):
             return Qubit(self.x * other, self.y * other)
