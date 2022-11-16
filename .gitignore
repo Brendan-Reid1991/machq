@@ -2,3 +2,4 @@
 *.coverage
 *.package.lock
 *.tar.gz
+*.DS_Store
