@@ -17,7 +17,7 @@ class PyMatching(Decoder):
     def __init__(self, circuit: Circuit):
         super().__init__(circuit=circuit)
 
-    def logical_failure_probability(num_shots: int) -> float:
+    def logical_failure_probability(self, num_shots: int) -> float:
         """This function taken from Gidneys "Getting Started" notebook.
         https://github.com/quantumlib/Stim/blob/main/doc/getting_started.ipynb
 
