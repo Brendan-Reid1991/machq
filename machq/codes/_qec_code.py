@@ -32,11 +32,11 @@ class QuantumErrorCorrectionCode(ABC):
         self.circuit.add_qubits(qubit_coords=self.qubit_coords)
 
     @abstractmethod
-    def define_data(self):
+    def _define_data_(self):
         """A method for getting the coordinates of data qubits, varies between codes."""
 
     @abstractmethod
-    def define_auxiliary(self):
+    def _define_auxiliary_(self):
         """A method for getting the coordinates of auxiliary qubits, varies between codes."""
 
     @abstractmethod
