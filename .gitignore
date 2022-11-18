@@ -4,3 +4,4 @@
 *.tar.gz
 *.DS_Store
 *.coverage
+*.tox
