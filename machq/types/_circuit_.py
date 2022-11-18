@@ -234,8 +234,8 @@ class Circuit:
         lookback_indices = [x[0] for x in lookbacks_and_args]
         arguments = [x[1] for x in lookbacks_and_args]
 
-        if len(arguments) != len(lookback_indices):
-            raise ValueError("Mismatch between lookback indices and arguments given.")
+        # if len(arguments) != len(lookback_indices):
+        #     raise ValueError("Mismatch between lookback indices and arguments given.")
 
         for lookbacks, arg in zip(lookback_indices, arguments):
             lookbacks = [lookbacks] if isinstance(lookbacks, int) else lookbacks
