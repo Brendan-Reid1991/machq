@@ -443,6 +443,8 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
         """
         rounds = min(self.x_distance, self.z_distance) if rounds is None else rounds
 
+        # Inter-round detectors are done with current round A ancillae
+        # and previous round B ancillae.
         max_lookback = len(self.auxiliary_qubits) + len(self.flag_qubits)
         previous_round_lookback = max_lookback + len(self.flag_qubits)
         for _r in range(1, rounds):
@@ -467,7 +469,7 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
             qubits=[self.qubit_map[qub] for qub in self.data_qubits]
         )
 
-        max_lookback = len(self.data_qubits) + len(self.z_auxiliary_qubits)
+        ancilla_lookback = len(self.data_qubits) + len(self.z_flags)
         data_lookback = len(self.data_qubits)
         lookback_and_args = []
 
@@ -476,7 +478,7 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
                 -data_lookback + dq_idx
                 for dq_idx, dq in enumerate(self.data_qubits)
                 if dq in self._neighbouring_data_qubits(auxiliary_qubit=z_aux)
-            ] + [-max_lookback + idx]
+            ] + [-ancilla_lookback + idx]
 
             lookback_and_args.append((_lookback_, (z_aux.x, z_aux.y, self.z_distance)))
 
@@ -492,7 +494,7 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
             qubits=[self.qubit_map[qub] for qub in self.data_qubits]
         )
 
-        max_lookback = len(self.data_qubits) + len(self.auxiliary_qubits)
+        max_lookback = len(self.data_qubits) + len(self.flag_qubits)
         data_lookback = len(self.data_qubits)
         lookback_and_args = []
 
