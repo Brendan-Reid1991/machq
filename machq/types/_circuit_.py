@@ -38,6 +38,12 @@ class Circuit:
     def __str__(self):
         return self.circuit.__str__()
 
+    def __getitem__(self, index):
+        return self.circuit[index]
+
+    def __len__(self):
+        return len(self.circuit)
+
     @property
     def as_stim(self):
         return self.circuit
