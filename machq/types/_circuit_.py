@@ -23,6 +23,15 @@ class Circuit:
 
         self.idling_qubits = {}
 
+    @classmethod
+    def from_stim(cls, stim_circuit: stim.Circuit):
+        empty_circuit = cls()
+        empty_circuit.circuit.append_from_stim_program_text(
+            stim_program_text=str(stim_circuit)
+        )
+
+        return empty_circuit
+
     def __repr__(self):
         return self.circuit.__repr__()
 
