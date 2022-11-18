@@ -54,7 +54,7 @@ class TestCircuitLevelNoise:
         assert circuit_level_noise.measurement_flip_prob == prob / 10
 
     def test_reset_noise(self, circuit_level_noise):
-        assert circuit_level_noise.reset_noise == NoiseChannels.Depolarize1(p=prob / 10)
+        assert circuit_level_noise.reset_noise == prob / 10
 
     def test_idle_noise(self, circuit_level_noise):
         assert circuit_level_noise.idle_noise == NoiseChannels.Depolarize1(p=prob / 10)

@@ -20,12 +20,12 @@ class TestQubit:
         "q1, q2, qsub",
         [
             (Qubit(1, 2), Qubit(0, 0), Qubit(1, 2)),
-            (Qubit(4, 3), Qubit(10, 12), Qubit(-6, -8)),
+            (Qubit(4, 3), Qubit(10, 12), Qubit(-6, -9)),
             (Qubit(44, 10002), Qubit(54, 1), Qubit(-10, 10001)),
         ],
     )
     def test_subtraction_of_qubits(self, q1, q2, qsub):
-        assert q1 + q2 == qsub
+        assert q1 - q2 == qsub
 
     @pytest.mark.parametrize(
         "q1, q2, qsum",
