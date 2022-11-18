@@ -3,6 +3,7 @@ from typing import List, Tuple, Optional
 import stim
 
 from machq.noise import NoiseProfile, NoiseChannels, DepolarizingNoise
+from machq.types import Qubit
 
 
 class Circuit:
@@ -58,6 +59,41 @@ class Circuit:
             self.circuit.append("QUBIT_COORDS", idx, qcoord)
             self.idling_qubits[idx] = 0
 
+    def get_qubit_index(self, qubit: Qubit):
+        """Given an input qubit coordinate,
+        find the index of the qubit in the stim circuit.
+
+        Parameters
+        ----------
+        qubit : Qubit
+            The qubit coordinate to find the index for.
+        """
+        qubit_indices = [
+            line.targets_copy()[0].value
+            for line in self.circuit
+            if line.name == "QUBIT_COORDS" and line.gate_args_copy() == list(qubit)
+        ]
+        return qubit_indices
+
+    def qubit_map(self, qubits: List[Qubit]) -> List[int]:
+        """Given a list of input qubit coordinates,
+        return their respective indices in the same order.
+
+        Parameters
+        ----------
+        qubits : List[Qubit]
+            List of qubit coordinates
+
+        Returns
+        -------
+        List[int]
+            List of qubit indices
+        """
+        indices = []
+        for qubit in qubits:
+            indices += self.get_qubit_index(qubit)
+        return indices
+
     def _check_qubits_exist(self, qubits: List[int] | int):
         """Private function to ensure functions
         are being applied to qubits actually present in
@@ -81,13 +117,13 @@ class Circuit:
         ):
             raise ValueError(f"Not all qubit(s) {qubits} are present in the circuit.")
 
-    def CX(self, qubits: List[int]):
+    def CX(self, qubits: List[Qubit]):
         """A convenience function that streamlines the use of
         a CNOT gate in stim.
 
         Parameters
         ----------
-        qubits : List[int]
+        qubits : List[Qubit]
             List of qubits to apply CX gates to.
             Even indexed qubits are controls,
             odd indexed qubits are targets.
@@ -95,7 +131,7 @@ class Circuit:
         if len(qubits) % 2 != 0:
             raise ValueError("Odd number of qubits passed to a CX gate.")
 
-        self._check_qubits_exist(qubits=qubits)
+        # self._check_qubits_exist(qubits=qubits)
 
         self.circuit.append("CX", qubits)
         stim_string, noise_param = self.two_qubit_gate_noise
