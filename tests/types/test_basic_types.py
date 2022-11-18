@@ -20,7 +20,7 @@ class TestQubit:
         "q1, q2, qsub",
         [
             (Qubit(1, 2), Qubit(0, 0), Qubit(1, 2)),
-            (Qubit(4, 3), Qubit(10, 12), Qubit(-6, -8)),
+            (Qubit(4, 3), Qubit(10, 12), Qubit(-6, -9)),
             (Qubit(44, 10002), Qubit(54, 1), Qubit(-10, 10001)),
         ],
     )
