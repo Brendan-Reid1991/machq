@@ -6,11 +6,10 @@ from machq.codes import QuantumErrorCorrectionCode
 from machq.noise import NoiseProfile, DepolarizingNoise, NoiseChannels
 
 
-class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
+class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
     r"""A class to implement a rotated planar code in stim.
     The stabilisers in this construction consist of two ancilla qubits,
-    in  order to mitigate against measurement noise specifically. This is a
-    unique flag qubit construction. The coordinate grid is defined similarly
+    in order to mitigate against measurement noise specifically. This is known as a "measurement gadget". The coordinate grid is defined similarly
     to the standard RPlanar code, as below.
 
     A code defined with (x_distance, z_distance) will have a coordinate grid spanning a
@@ -19,35 +18,32 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
     Qubit layout and co-ordinates are as shown for a 3x3 code here:
 
 
-    6├                            /   X   \
+    6├                            / XA XB \
      │                          /           \
     5├         / ○ ----------- ○ ----------- ○
      │       /   │             │             │
-    4├    Z      │      X      │      Z      │
+    4├  ZA ZB    │    XA XB    │    ZA ZB    │
      │       \   │             │             │
     3├         \ ○ ----------- ○ ----------- ○ \
      │           │             │             │   \
-    2├           │      Z      │      X      │      Z
+    2├           │    ZA ZB    │    XA XB    │   ZA ZB
      │           │             │             │   /
     1├           ○ ----------- ○ ----------- ○ /
      │            \           /
-    0├              \   X   /
+    0├              \ XA XB /
      │
      └----┴------┴------┴------┴------┴------┴------┴
           0      1      2      3      4      5      6
 
 
     As mentioned, each stabiliser (plaquette) consists of two qubits, rather than one.
-    These extra qubits, or flag qubits, are given "dummy" coordinates, which are simply
-    the coordinates of the auxiliary qubit +0.5. i.e., an aux-flag pair would have
-    coordinates (x, y) and (x + 0.5, y + 0.5).
+    The ancilla qubits "share coordinates" in some sense, such that each AB pair is given coordinates (x, y) and (x+0.5, y+0.5) respectively.
 
-    As a first pass, every stabiliser aux-flag pair is given the same orientation.
-    I believe this might have to change depending on the logical state we are
-    encoding in the code.
+    Above, the AB pairs are laid out beside each other and we will maintain
+    that representation, although it is not representative of qubit connectivity.
 
-    Stabiliser layout is as below. Empty squares represent auxiliary qubits
-    and filled squares represent flag qubits.
+    Stabiliser layout is as below. Empty squares represent A-ancillae qubits
+    and filled squares represent B-ancillae.
 
             ○ ----------- ○
             │             │
@@ -55,23 +51,20 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
             │             │
             ○ ----------- ○
 
-    These qubits are entangled using a "flag encoding" cirucit. We start with the case
-    of X-stabilisers (detecting Z-errors) and then generalise to Z-stabilisers.
+    These qubits are entangled using a "Ancilla encoding" cirucit. We start with the case of X-stabilisers (detecting Z-errors) and then generalise to Z-stabilisers.
              ┌───┐
     ◻︎ : |0> ─┤ H ├──■──
              └───┘┌─┴─┐
     ◼︎ : |0> ──────┤ X ├
                   └───┘
     This puts the pair into a Bell stage |ϕ+> = |00> + |11>.
-    The pair then share the weight four stabiliser, each taking part in two CNOTS
-    (schedule given below). In the presence of data qubit errors, the aux-flag pair
-    will be in one of |ϕ±> = |00> ± |11>.
+    The pair then share the weight four stabiliser, each taking part in two CNOTS (schedule given below). In the presence of data qubit errors, the AB pair will be in one of |ϕ±> = |00> ± |11>.
 
     We want these states to be mapped to
     |ϕ+> ---> |00>
     |ϕ-> ---> |11>
 
-    For this we use an "flag unencoding circuit", given by:
+    For this we use an "ancilla decoding circuit", given by:
                ┌───┐
     ◻︎ :  ──■───┤ H ├──■─── MZ
          ┌─┴─┐ └───┘┌─┴─┐
@@ -81,16 +74,15 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
     Where MZ here means we measure in the Z-basis.
 
     For Z-stabilisers, we need a Bell state that detects X-errors. Naturally,
-    this is achieved by |++> + |--> . This can be achieved with the same encoding
-    circuit given above. At the end of the stabiliser measurement however,
-    the aux-flag pair is in one of |ψ±> = |++> ± |-->. By applying Hadamards to both
-    auxiliary and flag, we find: H0 H1 |ψ±> = |ϕ±>.
-    As such then, the "flag unencoding circuit" for Z-stabilisers is the same
+    this is achieved by |++> + |--> . This can be achieved with the same encoding circuit given above. At the end of the stabiliser measurement however, the AB pair is in one of |ψ±> = |++> ± |-->.
+    By applying Hadamards to both A and B ancillae, we find:
+    H0 H1 |ψ±> = |ϕ±>.
+
+    As such then, the "ancilla decoding circuit" for Z-stabilisers is the same
     as for X-stabilisers, but with Hadamards applied to both qubits prior.
 
     We will begin by assuming that the schedule for each stabiliser is the same
-    as in the absence of flag qubits. That is, for X stabilisers we use a "Z" schedule,
-    and for Z stabilisers we use a "backwards N" schedule:
+    as in the absence of B ancillae. That is, for X stabilisers we use a "Z" schedule, and for Z stabilisers we use a "backwards N" schedule:
 
             ○ ----------- ○ ----------- ○
             │  1       2  │  1       3  │
@@ -100,23 +92,30 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
 
     Where here the numbers represent the time step.
 
-    We are maintaining that schedule, with the flag qubit layout identical in each
-    plaquette
+    We are maintaining that schedule, however we have a number of
+    different options for which auxiliary qubit takes part in which
+    timestep. Two arrangements are shown below. For both the X (left)
+    and Z (right) stabiliser, this is an AABB arrangement.
 
             ○ ----------- ○ ----------- ○
-            │  1       2  │  1       3  │
-            │    ◻︎ - ◼︎    │    ◻︎ - ◼︎    │
-            │  3       4  │  2       4  │
+            │  1 - ◻︎ - 2  │  1 ┐   ┌ 3  │
+            │      |      │    ◻︎ - ◼︎    │
+            │  3 - ◼︎ - 4  │  2 ┘   └ 4  │
             ○ ----------- ○ ----------- ○
 
-    Which means, for X stabilisers the order is
-    Aux - Flag - Aux - Flag
+    Similarly, we can choose an ABAB arrangement by swapping these:
 
-    For Z stabilisers the order is
-    Aux - Aux - Flag - Flag
+             ○ ----------- ○----------- ○
+             │  1 ┐   ┌ 2  │ 1 - ◻︎ - 3  |
+             │    ◻︎ - ◼︎    │     |      |
+             │  3 ┘   └ 4  │ 2 - ◼ - 4  |
+             ○ ----------- ○ -----------○
+
+    There is a third possibility, ABBA, which requires greater connectivity.
+
     """
 
-    name = "rotated_planar_flags"
+    name = "rotated_planar_measurement_gadget"
 
     def __init__(
         self,
@@ -211,6 +210,144 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
         """Add a time step to the circuit."""
         self.circuit.time_step(idle_noise=self.noise_profile.idle_noise)
 
+    def encode_flag_qubits(self):
+        """Encode the auxiliary and flag qubit pairs."""
+        self.circuit.reset_qubits(
+            [
+                self.qubit_map[qubit]
+                for qubit in (self.auxiliary_qubits + self.flag_qubits)
+            ]
+        )
+        self.time_step()
+        self.circuit.H(qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits])
+        self.time_step()
+        self.circuit.CX(
+            qubits=[
+                self.qubit_map[qubit]
+                for qubit in itertools.chain.from_iterable(
+                    zip(self.auxiliary_qubits, self.flag_qubits)
+                )
+            ]
+        )
+        self.time_step()
+
+    def decode_flag_qubits(self):
+        """Unentangle the auxiliary and flag qubit pairs"""
+        self.circuit.H(
+            qubits=[
+                self.qubit_map[aux] for aux in self.z_auxiliary_qubits + self.z_flags
+            ]
+        )
+
+        self.time_step()
+
+        self.circuit.CX(
+            qubits=[
+                self.qubit_map[qubit]
+                for qubit in itertools.chain.from_iterable(
+                    zip(self.auxiliary_qubits, self.flag_qubits)
+                )
+            ]
+        )
+        self.time_step()
+
+        self.circuit.H(qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits])
+
+        self.time_step()
+
+        self.circuit.CX(
+            qubits=[
+                self.qubit_map[qubit]
+                for qubit in itertools.chain.from_iterable(
+                    zip(self.auxiliary_qubits, self.flag_qubits)
+                )
+            ]
+        )
+        self.time_step()
+
+    def measure_aux_flag_pairs(self):
+        """Measure all auxiliary and flag qubits, and apply the within-round
+        detectors.
+        """
+        self.circuit.measure_qubits(
+            qubits=[
+                self.qubit_map[qubit]
+                for qubit in self.auxiliary_qubits + self.flag_qubits
+            ]
+        )
+        self.time_step()
+
+    def aux_flag_detectors(self, measurement_round: int = 0):
+        """Add the within-round detectors for auxiliary qubits
+        and flag qubits.
+
+        Parameters
+        ----------
+        measurement_round : int, optional
+            Which measurement round we are currently in, by default 0
+        """
+        max_lookback = len(self.auxiliary_qubits + self.flag_qubits)
+        flag_lookback = len(self.flag_qubits)
+        lookbacks_and_args = [
+            (
+                (
+                    [-max_lookback + idx, -flag_lookback + idx],
+                    (flag.x, flag.y, measurement_round),
+                )
+            )
+            for idx, flag in enumerate(self.flag_qubits)
+        ]
+        self.circuit.detectors(lookbacks_and_args=lookbacks_and_args)
+
+    def _measure_stabilisers(
+        self,
+        x_schedule: List[Tuple[int, int]],
+        z_schedule: List[Tuple[int, int]],
+    ):
+        """Measure all stabilisers in the code.
+
+        Parameters
+        ----------
+        x_schedule : List[Tuple[int, int]]
+            The schedule to follow for the X-stabilisers
+        z_schedule : List[Tuple[int, int]]
+            The schedule to follow for the Z-stabilisers
+        """
+
+        # We use these to determine if an auxiliary or flag qubit
+        # is involved in this time step.
+
+        # AFAF
+        # x_flag_steps = [1, 3]
+        # z_flag_steps = [1, 3]
+
+        # AAFF
+        # x_flag_steps = [2, 3]
+        # z_flag_steps = [2, 3]
+
+        # AFFA
+        x_flag_steps = [1, 2]
+        z_flag_steps = [1, 2]
+
+        for idx, (x_delta, z_delta) in enumerate(zip(x_schedule, z_schedule)):
+            cnot_qubits = []
+
+            for x_aux, x_flag in zip(self.x_auxiliary_qubits, self.x_flags):
+                data = x_aux + x_delta
+                if data in self.data_qubits:
+                    ctrl = x_aux if idx not in x_flag_steps else x_flag
+                    cnot_qubits += [ctrl, data]
+
+            for z_aux, z_flag in zip(self.z_auxiliary_qubits, self.z_flags):
+                data = z_aux + z_delta
+                if data in self.data_qubits:
+                    targ = z_aux if idx not in z_flag_steps else z_flag
+                    cnot_qubits += [data, targ]
+
+            cnot_qubit_indices = [self.qubit_map[x] for x in cnot_qubits]
+            self.circuit.CX(cnot_qubit_indices)
+            self.time_step()
+
     def _measure_syndromes_(
         self,
         x_schedule: List[Tuple[int, int]] = None,
@@ -230,45 +367,18 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
             else [(-1, 1), (-1, -1), (1, 1), (1, -1)]
         )
 
-        self.circuit.H([self.qubit_map[x_aux] for x_aux in self.x_auxiliary_qubits])
+        self.encode_flag_qubits()
 
-        self.time_step()
+        self._measure_stabilisers(x_schedule=x_schedule, z_schedule=z_schedule)
 
-        for idx, (x_delta, z_delta) in enumerate(zip(x_schedule, z_schedule)):
-            cnot_qubits = []
-            for qubit in self.auxiliary_qubits:
-                if (
-                    qubit in self.x_auxiliary_qubits
-                    and qubit + x_delta in self.data_qubits
-                ):
-                    cnot_qubits.append(qubit)
-                    cnot_qubits.append(qubit + x_delta)
-                if (
-                    qubit in self.z_auxiliary_qubits
-                    and qubit + z_delta in self.data_qubits
-                ):
-                    cnot_qubits.append(qubit + z_delta)
-                    cnot_qubits.append(qubit)
+        self.decode_flag_qubits()
 
-            cnot_qubit_indices = [self.qubit_map[x] for x in cnot_qubits]
-            self.circuit.CX(cnot_qubit_indices)
-            self.time_step()
-
-        self.circuit.H([self.qubit_map[x_aux] for x_aux in self.x_auxiliary_qubits])
-
-        self.time_step()
-
-        self.circuit.measure_qubits(
-            qubits=[self.qubit_map[aux] for aux in self.x_auxiliary_qubits],
-        )
-        self.circuit.measure_qubits(
-            qubits=[self.qubit_map[aux] for aux in self.z_auxiliary_qubits],
-        )
-
-        self.time_step()
+        self.measure_aux_flag_pairs()
 
         self.circuit.reset_qubits(
-            qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits]
+            qubits=[
+                self.qubit_map[aux] for aux in self.auxiliary_qubits + self.flag_qubits
+            ]
         )
 
     def encode_logical_zero(self):
@@ -286,7 +396,9 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
 
         self._measure_syndromes_()
 
-        max_lookback = len(self.z_auxiliary_qubits)
+        self.aux_flag_detectors(measurement_round=0)
+
+        max_lookback = len(self.z_auxiliary_qubits) + len(self.flag_qubits)
         lookback_and_arguments = [
             ([-max_lookback + idx], (z_aux.x, z_aux.y, 0))
             for idx, z_aux in enumerate(self.z_auxiliary_qubits)
@@ -306,11 +418,13 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
         noise_param = self.noise_profile.reset_noise
 
         self.circuit.reset_qubits()
-        self.circuit.H([self.qubit_map[x] for x in self.data_qubits])
+        self.time_step()
 
         self._measure_syndromes_()
 
-        max_lookback = len(self.auxiliary_qubits)
+        self.aux_flag_detectors(measurement_round=0)
+
+        max_lookback = len(self.auxiliary_qubits) + len(self.flag_qubits)
         lookback_and_arguments = [
             ([-max_lookback + idx], (x_aux.x, x_aux.y, 0))
             for idx, x_aux in enumerate(self.x_auxiliary_qubits)
@@ -329,14 +443,16 @@ class RotatedPlanarCodeFlags(QuantumErrorCorrectionCode):
         """
         rounds = min(self.x_distance, self.z_distance) if rounds is None else rounds
 
-        max_lookback = len(self.auxiliary_qubits)
+        max_lookback = len(self.auxiliary_qubits) + len(self.flag_qubits)
+        previous_round_lookback = max_lookback + len(self.flag_qubits)
         for _r in range(1, rounds):
             self._measure_syndromes_()
 
-            # if _r < rounds - 1:
+            self.aux_flag_detectors(measurement_round=_r)
+
             lookbacks_and_arguments = [
                 (
-                    [-max_lookback + idx, -2 * max_lookback + idx],
+                    [-max_lookback + idx, -previous_round_lookback + idx],
                     (aux.x, aux.y, _r),
                 )
                 for idx, aux in enumerate(self.auxiliary_qubits)
