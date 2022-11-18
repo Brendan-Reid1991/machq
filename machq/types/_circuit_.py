@@ -38,6 +38,12 @@ class Circuit:
     def __str__(self):
         return self.circuit.__str__()
 
+    def __getitem__(self, index):
+        return self.circuit[index]
+
+    def __len__(self):
+        return len(self.circuit)
+
     @property
     def as_stim(self):
         return self.circuit
@@ -64,6 +70,7 @@ class Circuit:
             # TODO Make this more general
         """
         qubit_coords = qubit_coords if qubit_coords is not None else range(num_qubits)
+        self.valid_qubits = len(qubit_coords)
         for idx, qcoord in enumerate(qubit_coords):
             self.circuit.append("QUBIT_COORDS", idx, qcoord)
             self.idling_qubits[idx] = 0
@@ -115,15 +122,7 @@ class Circuit:
         """
         qubits = qubits if isinstance(qubits, List) else [qubits]
 
-        if not all(
-            x
-            in [
-                line.targets_copy()[0].value
-                for line in self.circuit
-                if line.name == "QUBIT_COORDS"
-            ]
-            for x in qubits
-        ):
+        if not all(x < self.valid_qubits for x in qubits):
             raise ValueError(f"Not all qubit(s) {qubits} are present in the circuit.")
 
     def CX(self, qubits: List[Qubit]):
@@ -140,7 +139,7 @@ class Circuit:
         if len(qubits) % 2 != 0:
             raise ValueError("Odd number of qubits passed to a CX gate.")
 
-        # self._check_qubits_exist(qubits=qubits)
+        self._check_qubits_exist(qubits=qubits)
 
         self.circuit.append("CX", qubits)
         stim_string, noise_param = self.two_qubit_gate_noise
@@ -235,8 +234,8 @@ class Circuit:
         lookback_indices = [x[0] for x in lookbacks_and_args]
         arguments = [x[1] for x in lookbacks_and_args]
 
-        if len(arguments) != len(lookback_indices):
-            raise ValueError("Mismatch between lookback indices and arguments given.")
+        # if len(arguments) != len(lookback_indices):
+        #     raise ValueError("Mismatch between lookback indices and arguments given.")
 
         for lookbacks, arg in zip(lookback_indices, arguments):
             lookbacks = [lookbacks] if isinstance(lookbacks, int) else lookbacks
