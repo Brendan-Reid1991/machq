@@ -317,15 +317,15 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
         # We use these to determine if an auxiliary or flag qubit
         # is involved in this time step.
 
-        # AFAF
+        # ABAB
         # x_flag_steps = [1, 3]
         # z_flag_steps = [1, 3]
 
-        # AAFF
+        # AABB
         # x_flag_steps = [2, 3]
         # z_flag_steps = [2, 3]
 
-        # AFFA
+        # ABBA
         x_flag_steps = [1, 2]
         z_flag_steps = [1, 2]
 
