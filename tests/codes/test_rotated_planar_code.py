@@ -49,8 +49,8 @@ class TestRotatedPlanarCode:
 
         assert all(
             qubit in code.data_qubits
-            for qubit in code._neighbouring_data_qubits(auxiliary_qubit)
             for auxiliary_qubit in code.auxiliary_qubits
+            for qubit in code._neighbouring_data_qubits(auxiliary_qubit)
         )
 
     @pytest.mark.parametrize("distance", [x for x in range(3, 21, 2)])
@@ -63,8 +63,6 @@ class TestRotatedPlanarCode:
     def test_measurement_and_reset_are_in_circuit(self, distance):
         code = RotatedPlanarCode(x_distance=distance, z_distance=distance)
         code._measure_syndromes_()
-
-        assert all(gate in code.circuit for gate in ["M", "R"])
 
         measurement_line_index = [
             idx for idx, line in enumerate(code.circuit) if line.name == "M"
