@@ -186,10 +186,7 @@ class RotatedPlanarCode(QuantumErrorCorrectionCode):
         self.time_step()
 
         self.circuit.measure_qubits(
-            qubits=[self.qubit_map[aux] for aux in self.x_auxiliary_qubits],
-        )
-        self.circuit.measure_qubits(
-            qubits=[self.qubit_map[aux] for aux in self.z_auxiliary_qubits],
+            qubits=[self.qubit_map[aux] for aux in self.auxiliary_qubits],
         )
 
         self.time_step()
@@ -260,7 +257,6 @@ class RotatedPlanarCode(QuantumErrorCorrectionCode):
         for _r in range(1, rounds):
             self._measure_syndromes_()
 
-            # if _r < rounds - 1:
             lookbacks_and_arguments = [
                 (
                     [-max_lookback + idx, -2 * max_lookback + idx],
@@ -325,7 +321,7 @@ class RotatedPlanarCode(QuantumErrorCorrectionCode):
         Parameters
         ----------
         rounds : int, optional
-            How many rounds to maintian the logical zero state for, by default None.
+            How many rounds to maintain the logical zero state for, by default None.
             If None, the value of z_distance is taken.
         """
         rounds = self.z_distance if rounds is None else rounds
