@@ -10,26 +10,26 @@ class NoiseChannels:
     """
 
     @staticmethod
-    def Depolarize1(p: float) -> Tuple:
+    def Depolarize1(p: float) -> Tuple[str, float]:
         """Unbiased, single qubit depolarizing noise of strength p"""
-        return (p / 3,) * 3
+        return "DEPOLARIZE1", p
 
     @staticmethod
-    def Depolarize2(p: float) -> Tuple:
+    def Depolarize2(p: float) -> Tuple[str, float]:
         """Unbiased, two qubit depolarizing noise of strength p"""
-        return (p / 15,) * 15
+        return "DEPOLARIZE2", p
 
     @staticmethod
-    def XError(p: float) -> Tuple:
+    def XError(p: float) -> Tuple[str, float]:
         """X-Error of strength p"""
-        return (p, 0, 0)
+        return "X_ERROR", p
 
     @staticmethod
-    def YError(p: float) -> Tuple:
+    def YError(p: float) -> Tuple[str, float]:
         """Y-Error of strength p"""
-        return (0, p, 0)
+        return "Y_ERROR", p
 
     @staticmethod
-    def ZError(p: float) -> Tuple:
+    def ZError(p: float) -> Tuple[str, float]:
         """Z-Error of strength p"""
-        return (0, 0, p)
+        return "Z_ERROR", p
