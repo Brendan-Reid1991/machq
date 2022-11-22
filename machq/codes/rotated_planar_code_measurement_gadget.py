@@ -266,9 +266,7 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
         self.time_step()
 
     def measure_aux_flag_pairs(self):
-        """Measure all auxiliary and flag qubits, and apply the within-round
-        detectors.
-        """
+        """Measure all auxiliary and flag qubits."""
         self.circuit.measure_qubits(
             qubits=[
                 self.qubit_map[qubit]
@@ -558,3 +556,21 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
             if qub.x == self.x_dim - 2
         ]
         self.circuit.add_logical(indices=logical_indices)
+
+
+if __name__ == "__main__":
+    from machq.codes import RotatedPlanarCode
+    from machq.decoders import PyMatching
+
+    gadget = RotatedPlanarCodeGadget(
+        x_distance=7, z_distance=7, noise_profile=DepolarizingNoise(p=0.01)
+    )
+    gadget.logical_x_memory()
+
+    standard = RotatedPlanarCode(
+        x_distance=7, z_distance=7, noise_profile=DepolarizingNoise(p=0.01)
+    )
+    standard.logical_x_memory()
+
+    gadget_decoder = PyMatching(circuit=gadget.circuit)
+    standard_decoder = PyMatching(circuit=standard.circuit)
