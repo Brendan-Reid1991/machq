@@ -72,7 +72,6 @@ class HighMeasurement(CircuitLevelNoise):
     """
 
     name = "circuit_level"
-    measurement_flip_prob = 0.01
 
     def __init__(self, p, measurement_flip_prob=0.01):
         super().__init__(p=p)
