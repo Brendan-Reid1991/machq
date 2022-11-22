@@ -64,3 +64,19 @@ class CircuitLevelNoise(DepolarizingNoise):
         self.measurement_flip_prob = p / 10
         self.reset_noise = p / 10
         self.idle_noise = NoiseChannels.Depolarize1(p=p / 10)
+
+
+class HighMeasurement(CircuitLevelNoise):
+    """A noise profile where measurement flips are the dominant
+    noise channel.
+    """
+
+    name = "circuit_level"
+    measurement_flip_prob = 0.01
+
+    def __init__(self, p, measurement_flip_prob=0.01):
+        super().__init__(p=p)
+        self.single_qubit_gate_noise = NoiseChannels.Depolarize1(p=p / 10)
+        self.measurement_flip_prob = measurement_flip_prob
+        self.reset_noise = p / 10
+        self.idle_noise = NoiseChannels.Depolarize1(p=p / 10)
