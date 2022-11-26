@@ -561,16 +561,22 @@ class RotatedPlanarCodeGadget(QuantumErrorCorrectionCode):
 if __name__ == "__main__":
     from machq.codes import RotatedPlanarCode
     from machq.decoders import PyMatching
+    from machq.noise import HighMeasurement
 
     gadget = RotatedPlanarCodeGadget(
-        x_distance=7, z_distance=7, noise_profile=DepolarizingNoise(p=0.01)
+        x_distance=7, z_distance=7, noise_profile=HighMeasurement(p=0.001)
     )
-    gadget.logical_x_memory()
+    gadget.logical_z_memory()
 
     standard = RotatedPlanarCode(
-        x_distance=7, z_distance=7, noise_profile=DepolarizingNoise(p=0.01)
+        x_distance=7, z_distance=7, noise_profile=HighMeasurement(p=0.001)
     )
-    standard.logical_x_memory()
+    standard.logical_z_memory()
 
     gadget_decoder = PyMatching(circuit=gadget.circuit)
     standard_decoder = PyMatching(circuit=standard.circuit)
+
+    print(
+        f"Gadget logical error: {gadget_decoder.logical_failure_probability(num_shots=1e5)}\n"
+        f"standard logical error: {standard_decoder.logical_failure_probability(num_shots=1e5)}"
+    )
