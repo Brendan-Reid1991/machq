@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from machq.types import Circuit
+from machq.noise import ErrorModel
 
 
 class Decoder(ABC):
@@ -11,6 +12,8 @@ class Decoder(ABC):
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
         self.stim_circuit = circuit.as_stim
+
+        self.error_model = ErrorModel(circuit=self.stim_circuit)
 
     def __str__(self) -> str:
         return f"{self.name}"
