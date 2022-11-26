@@ -3,4 +3,5 @@ from machq.noise.basic_noise_model import (
     NoiseProfile,
     DepolarizingNoise,
     CircuitLevelNoise,
+    HighMeasurement,
 )
