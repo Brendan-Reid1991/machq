@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 import stim
 
 from machq.noise import NoiseProfile, NoiseChannels, DepolarizingNoise
-from machq.types import Qubit
+from machq.types._basic_types import Qubit
 
 
 class Circuit:
