@@ -11,6 +11,8 @@ class QuantumMemory:
         self.code = code
         self.decoder = decoder(circuit=self.code.circuit)
 
+        self.code_vars = code.vars
+
     def memory_experiment(self, logical: str, rounds: int = None, num_shots: int = 1e4):
         """Run a quantum memory experiment.
 
@@ -47,10 +49,10 @@ if __name__ == "__main__":
     from machq.noise import DepolarizingNoise
     from machq.decoders import PyMatching
 
-    for d in [3, 5, 7, 9]:
-        code = RotatedPlanarCode(
-            x_distance=d, z_distance=d, noise_profile=DepolarizingNoise(p=0.001)
-        )
+    d = 3
+    code = RotatedPlanarCode(
+        x_distance=d, z_distance=d, noise_profile=DepolarizingNoise(p=0.001)
+    )
 
-        qmem = QuantumMemory(code=code, decoder=PyMatching)
-        print(qmem.memory_experiment(logical="Z", num_shots=1e5))
+    qmem = QuantumMemory(code=code, decoder=PyMatching)
+    print(qmem.code_vars)

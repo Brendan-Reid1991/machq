@@ -14,11 +14,6 @@ from machq.noise import NoiseProfile
 from machq.analysis import QuantumMemory
 
 
-class ExperimentPair(NamedTuple):
-    code: Type[QuantumErrorCorrectionCode]
-    decoder: Type[Decoder]
-
-
 class CodeExperiment:
     """A class that allows multiple experiments to be run on a code."""
 
