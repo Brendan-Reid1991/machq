@@ -18,7 +18,8 @@ class PyMatching(Decoder):
         super().__init__(circuit=circuit)
 
     def logical_failure_probability(self, num_shots: int) -> float:
-        """This function taken from Gidneys "Getting Started" notebook.
+        """This function taken (and rewritten)
+        from Gidneys "Getting Started" notebook.
         https://github.com/quantumlib/Stim/blob/main/doc/getting_started.ipynb
 
         Parameters
@@ -31,18 +32,10 @@ class PyMatching(Decoder):
         float
             The probability of a logical failure in the circuit
         """
-        num_detectors = self.stim_circuit.num_detectors
-        num_observables = self.stim_circuit.num_observables
+        detector_error_model = self.error_model.detector_error_model(graphlike=True)
 
-        # Sample the circuit.
-        sampler = self.stim_circuit.compile_detector_sampler()
-        detection_events, observable_flips = sampler.sample(
-            int(num_shots), separate_observables=True
-        )
-
-        # Extract decoder configuration data from the circuit.
-        detector_error_model = self.stim_circuit.detector_error_model(
-            decompose_errors=True, approximate_disjoint_errors=True
+        detection_events, observable_flips = self.error_model.detector_events(
+            num_shots=num_shots
         )
 
         # Run the decoder.

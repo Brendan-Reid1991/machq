@@ -2,9 +2,6 @@ from __future__ import annotations
 from typing import List, Tuple, Optional, NamedTuple, NewType
 import stim
 
-from machq.noise import NoiseProfile, NoiseChannels, DepolarizingNoise
-
-
 Distance = NewType("Distance", int)
 
 
