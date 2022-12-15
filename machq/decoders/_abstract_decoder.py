@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
-from machq.types import Circuit
-from machq.noise import ErrorModel
+from machq.types import Circuit, ErrorModel
 
 
 class Decoder(ABC):

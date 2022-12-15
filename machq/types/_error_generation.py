@@ -66,6 +66,23 @@ class ErrorModel:
             shots=int(num_shots), separate_observables=True
         )
 
+    def detector_events_as_binary(
+        self, num_shots: int = 1e4
+    ) -> Tuple[NDArray[int], NDArray[int]]:
+        """Get the detection events and corresponding observable flips.
+
+        Returns
+        -------
+        Tuple[NDArray[bool], NDArray[bool]]
+            Return a tuple, whose elements are a Numpy array of detection events of shape (num_shots * num_detectors) and an array of observable flips
+            of shape (num_shots * 1). The boolean entries refer to if a detector (respectively observable) was flipped.
+        """
+
+        events, observables = self.detector_sampler().sample(
+            shots=int(num_shots), separate_observables=True
+        )
+        return np.array(events, dtype=int), np.array(observables, dtype=int)
+
     def _detectors_triggered(self, events: NDArray[bool]):
         """Observe which detectors were triggered.
 
